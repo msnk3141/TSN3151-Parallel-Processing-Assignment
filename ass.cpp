@@ -20,18 +20,6 @@ Run with:
 
 using namespace std;
 
-/*
-Comments!
-Used std global namespace
-Removed unused GotoLine() function
-Better variable names
-Added function descriptions
-Changed get_lines() to get_line_count(), 
-Changed function signature of process_lines()
-Merged the two while-loops in process_lines() to a single succinct for-loop
-Kept but commented out scaffolding for future testing 
-*/
-
 int get_line_count(string filename) {
 	/* Return the number of lines in a given text file. */
 	
@@ -127,7 +115,7 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	
 	// Process variables
-	string filename = "uglyduck.txt";
+	string filename = "pg100.txt";
 	int totalLines; // total number of lines in the file
 	int eachLines; // number of lines for each process to work on
 	int remLines; // number of remaining lies for root proccess to work on
@@ -250,7 +238,7 @@ int main(int argc, char* argv[]) {
 	if (!rank){
 		compose_counter(total_counter,keysTotal,valuesTotal);
 		cout << "Contents of the total_counter:-" << endl;
-		// print_counter(total_counter);
+		print_counter(total_counter);
 	}
 
     delete[] dictKeys;

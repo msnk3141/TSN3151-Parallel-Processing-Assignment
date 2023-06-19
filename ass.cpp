@@ -79,7 +79,7 @@ void process_lines(std::string filename, Counter& counter, int start, int eachLi
 		// process each word in this line
 		wordCount = 0;
 		while (ss >> word) {
-			add_counter_item(counter, word);
+			update_counter(counter, word);
 			wordCount++;
 		}
 		lineNumber++;
@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
 
 	if (!rank){
 		compose_counter(total_counter,keysTotal,valuesTotal);
-		print_counter_content(total_counter,"All");
+		print_counter(total_counter);
 	}
 
     delete[] dictKeys;

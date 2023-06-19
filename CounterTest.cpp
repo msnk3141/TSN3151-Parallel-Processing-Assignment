@@ -1,4 +1,12 @@
-/*Program for testing Counter object.*/
+/* 
+Program for testing Counter object; demonstrating functions in "Counter.h". 
+
+Compile with:
+	$ g++ CounterTest.cpp -o CounterTest
+
+Run with:
+	$ ./CounterTest
+*/
 
 #include <iostream>
 #include <string>
@@ -6,49 +14,69 @@
 #include "Counter.h"
 
 int main() {
-	Counter fruit_basket; // define an empty dict
+	// Defining an empty Counter ...
+	Counter fruit_basket; 
 	
-	// insert key-value pair(s)
-	fruit_basket["apple"] = 5;
-	fruit_basket.insert( {"pear", 2} );
-	fruit_basket.insert( {{"orange", 5}, {"mango", 1}} );
+	// Initializing the Counter by inserting key-value pair(s), in multiple ways ...
+	fruit_basket["apple"] = 5; // direct access operator
+	fruit_basket.insert( {"pear", 2} ); // single pair
+	fruit_basket.insert( {{"orange", 5}, {"mango", 1}} ); // multiple pairs
 	
-	// show dict's content
-	print_counter_content(fruit_basket, "fruit basket");
+	std::cout << "Contents of fruit_basket:-" << std::endl;
+	print_counter(fruit_basket);
 	
-	// list of fruits to add
-	std::string new_fruits[10] = {
+	
+	// Updating the Counter, given a single word ...
+	update_counter(fruit_basket, "papaya", 2); // adding a new word with count of 2
+	update_counter(fruit_basket, "mango", 2); // update count of an existing word by 2
+	update_counter(fruit_basket, "dragonfruit"); // adding new word, default count of 1
+	update_counter(fruit_basket, "dragonfruit"); // update count of an existing word by 1
+	
+	// Updating the Counter using a vector of words ...
+	std::vector<std::string> some_fruits = {
 		"apple", "orange", "orange", "mango", "apple",
 		"banana", "orange", "banana", "guava", "mango"
 	};
+	update_counter(fruit_basket, some_fruits);
 	
-	// add fruits in the list to the dict
-	for(std::string fruit : new_fruits) {
-		add_counter_item(fruit_basket, fruit);
-		std::cout << "Adding fruit '" << fruit << "'..." << std::endl;
-	}
+	// Updating the Counter using another Counter ...
+	Counter small_fruit_basket( {{"banana", 2}, {"avocado", 1}, {"pear", 3}} );
+	update_counter(fruit_basket, small_fruit_basket);
+	
+	std::cout << "Contents of updated fruit_basket:-" << std::endl;
+	print_counter(fruit_basket);
+	
+	// Querying the size of the Counter ...
+	std::cout << "Size of fruit_basket (i.e. number of unique fruits): " 
+		<< get_counter_size(fruit_basket) << std::endl;
+	
+	// Calculating the total count in the Counter ...
+	std::cout << "Total count in fruit_basket: " << get_counter_total(fruit_basket) << std::endl;
 	std::cout << std::endl;
+
+
+	// Decomposing the Counter contents into contiguous data objects ...
 	
-	// show dict's content again to check
-	print_counter_content(fruit_basket, "fruit basket");
-	
-	std::string counter_keys; // each word separated by newline character
-	std::vector<int> counter_values;
+	std::string counter_keys; // to contiguously store the counter keys (string) where the keys are separated by a newline char
+	std::vector<int> counter_values; // to contiguously store the counter values (int) where each value is an element
 	decompose_counter(fruit_basket, counter_keys, counter_values);
 	
-	std::cout << counter_keys;
-	std::cout << "[" << counter_keys.size() << " chars including newlines]\n";
-	
+	std::cout << "Decomposition of fruit_basket:-" << std::endl;
+	std::cout << "Fruit names (counter keys):" << std::endl << counter_keys;
+	std::cout << "Fruit count (counter values):" << std::endl;
 	for (int i : counter_values)
 		std::cout << i << std::endl;
-	
 	std::cout << std::endl;
-	std::cout << std::endl;
-	std::cout << "Composing counter from strings and int vector..." << std::endl;
 	
-	Counter new_basket;
-	compose_counter(new_basket, counter_keys, counter_values);
-	print_counter_content(new_basket, "new basket");
+	
+	// Recomposing the Counter from contiguous data objects ...
+	
+	Counter new_fruit_basket; // new Counter
+	
+	compose_counter(new_fruit_basket, counter_keys, counter_values);
+	std::cout << "(Re)composition of new_fruit_basket:-" << std::endl;
+	print_counter(new_fruit_basket);
+	
 	
 	return 0;
 }
@@ -59,8 +87,6 @@ Note: While we can use the [] operator to access the elements, it is preferable 
 
 This is because at() throws an exception whenever the specified key doesn't exist, 
 while [] creates a new pair with the key and pairs the key with a garbage value.
-
-
 
 We can use the following methods to check if the specified key exists in the unordered map.
 

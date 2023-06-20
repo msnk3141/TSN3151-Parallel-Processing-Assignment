@@ -106,13 +106,11 @@ void compose_counter(Counter& counter, std::string words, std::vector<int> count
 	*/
 	
 	std::stringstream ss(words); // convert string of words to stream
-	std::string key; // temporary variable to hold a word
+	std::string word; // temporary variable to hold a word
 	int i = 0; // index for counts vector
-	while (ss >> key)
-		counter[key] = counts[i++];
+	while (ss >> word)
+		update_counter(counter, word, counts[i++]);
 }
-
-
 
 vector<string> getKeys(Counter& counter){
 	vector<string> keys;

@@ -115,14 +115,16 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	
 	// Process variables
-	string filename = "pg100.txt";
+	string filename = "ascii-only/browning.txt";
 	int totalLines; // total number of lines in the file
 	int eachLines; // number of lines for each process to work on
 	int remLines; // number of remaining lies for root proccess to work on
-	Counter word_counter; // word counter of this process
+	Counter eachWordCounter; // word counter of this process
 
-	// Root proc determines the total number of lines and each process's line count
+	// ROOT proc determines the total number of lines and each process's line count
 	if (rank == ROOT) {
+		/* QUERY USER FOR INPUT HERE! */
+		
 		totalLines = get_line_count(filename);
 		eachLines = totalLines / nprocs; // divided equally between the processes
 		remLines = totalLines % nprocs;
@@ -132,122 +134,118 @@ int main(int argc, char* argv[]) {
 			// << " remLines:" << remLines << endl;
 		
 		// handle work for remaining lines
-		process_lines(filename, remLines, (eachLines*nprocs), word_counter);
+		process_lines(filename, remLines, (eachLines*nprocs), eachWordCounter);
 	}
 	
 	// Broadcast each process's line count
 	MPI_Bcast(&eachLines, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 
 	// Each process works on their section of the text file
-	process_lines(filename, eachLines, (eachLines*rank), word_counter);
+	process_lines(filename, eachLines, (eachLines*rank), eachWordCounter);
 	
 	MPI_Barrier(MPI_COMM_WORLD);
+	
+	// Decomposing the counter of each proc into words and counts objects
+	std::string eachWords;
+	std::vector<int> eachCounts; 
+	decompose_counter(eachWordCounter, eachWords, eachCounts);
 
-	/*----------------
-		gather values
-	------------------*/
-
-	auto values = getValues(word_counter);
-	auto keys = getKeys(word_counter);
-	int dataSize = values.size();
-
-	int recvIntCount[nprocs];
-
-	MPI_Gather(&dataSize, 1, MPI_INT,recvIntCount, 1, MPI_INT,ROOT, MPI_COMM_WORLD);
-
-	int totlen = 0;
-    int displsValues[nprocs];
-    int *totalInt = NULL;
-
+	// Variables/arguments for count data gathering
+	int sendIntAmount; 			// number of ints that each proc sends to ROOT proc
+    int *gatheredIntBuf = NULL; // large buffer array to store the gathered ints from each proc
+								// [ROOT use only]
+	int recvIntAmounts[nprocs]; // array of number of ints the ROOT proc receives from each proc
+								// [ROOT use only]
+    int intBufOffsets[nprocs]; 	// array of index offsets for `gatheredIntBuf` to correctly gather 
+								// and load contiguous ints [ROOT use only]
+	int intBufSize; 			// total size of `gatheredIntBuf` to be computed [ROOT use only]
+	
+	// Variables/arguments for word data gathering
+	int sendCharAmount;				// number of chars that each proc sends to ROOT proc
+	char *gatheredCharBuf = NULL; 	// large buffer array to store the gathered chars from each proc
+									// [ROOT use only]
+	int recvCharAmounts[nprocs]; 	// array of number of chars the ROOT proc receives from each 
+									// proc [ROOT use only]
+	int charBufOffsets[nprocs]; 	// array of index offsets for `gatheredCharBuf` to correctly 
+									// gather and load contiguous chars [ROOT use only]
+	int charBufSize;				// total size of `gatheredIntBuf` to be computed [ROOT use only]
+	
+	
+	// get the amount of ints for each proc to send, then gather the amounts in ROOT proc
+	sendIntAmount = eachCounts.size(); 
+	MPI_Gather(&sendIntAmount, 1, MPI_INT, recvIntAmounts, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+	
+	// get the amount of chars for each proc to send, then gather the amounts in ROOT proc
+	sendCharAmount = eachWords.size();
+    MPI_Gather(&sendCharAmount, 1, MPI_INT, recvCharAmounts, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+	
+	// ROOT proc computes and sets the index offsets and total sizes of the two large buffer arrays,
+	// also allocates memory for the buffer arrays.
     if (rank == ROOT) {
-
-        displsValues[0] = 0;
-        totlen += recvIntCount[0];
-
-        for (int i=1; i<nprocs; i++) {
-           totlen += recvIntCount[i];
-           displsValues[i] = displsValues[i-1] + recvIntCount[i-1];
+		intBufSize = charBufSize = 0; // count fromm 0 to help fill offset values
+        for (int r = 0; r < nprocs; r++) { 
+			// index offsets are based on the rank values of each proc along with the total number
+			// of procs
+			
+			// Compute index offsets and total size for large buffer array of ints (count data)
+			intBufOffsets[r] = intBufSize; // displacement relative to `gatheredIntBuf`
+			intBufSize += recvIntAmounts[r]; // accumulate the total size
+			
+			// Compute index offsets and total size for large buffer array of chars (words data)
+			charBufOffsets[r] = charBufSize; // displacement relative to `gatheredCharBuf`
+			charBufSize += recvCharAmounts[r]; // accumulate the total of all counter sizes
         }
-        totalInt = (int*) malloc(totlen * sizeof(int));
+		
+        gatheredIntBuf = new int[intBufSize]; // allocate buffer memory based on total size
+		charBufSize += 1; // additional space for null terminating character
+        gatheredCharBuf = new char[charBufSize]; // allocate buffer memory based on total size
     }
-
-	MPI_Barrier(MPI_COMM_WORLD);
-
-	MPI_Gatherv(&values[0], dataSize, MPI_INT, totalInt, recvIntCount, displsValues, MPI_INT,ROOT, MPI_COMM_WORLD);
+		
+	// Gather counts (int data) into large contiguous buffer
+	MPI_Gatherv(&eachCounts[0], sendIntAmount, MPI_INT, 
+		gatheredIntBuf, recvIntAmounts, intBufOffsets, MPI_INT, 
+		ROOT, MPI_COMM_WORLD);
+		
+	// Gather words (char data) into large contiguous buffer
+	MPI_Gatherv(eachWords.c_str(), sendCharAmount, MPI_CHAR,
+		gatheredCharBuf, recvCharAmounts, charBufOffsets, MPI_CHAR,
+		ROOT, MPI_COMM_WORLD);
 	
-	/*----------------
-		gather keys
-	------------------*/
-	int maxKeyLength = 150;
-
-	int numKeys = keys.size();
-    int totalLength = numKeys * maxKeyLength;
-    int finalNumKeys = 0;
-    MPI_Reduce(&numKeys, &finalNumKeys, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-
-    // Computing number of elements that are received from each process
-    int *recvcounts = NULL;
-    if (rank == 0)
-        recvcounts = new int[nprocs];
-
-    MPI_Gather(&totalLength, 1, MPI_INT, recvcounts, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    // Computing displacement relative to recvbuf at which to place the incoming data from each process
-    int *displs = NULL;
-    if (rank == 0)
-    {
-        displs = new int[nprocs];
-
-        displs[0] = 0;
-        for (int i = 1; i < nprocs; i++)
-            displs[i] = displs[i - 1] + recvcounts[i - 1];
-    }
-
-    char(*dictKeys)[maxKeyLength];
-    char(*finalDictKeys)[maxKeyLength];
-    dictKeys = (char(*)[maxKeyLength])malloc(numKeys * sizeof(*dictKeys));
-    if (rank == 0)
-        finalDictKeys = (char(*)[maxKeyLength])malloc(finalNumKeys * sizeof(*finalDictKeys));
-
-    // Collect keys for each process
-    int i = 0;
-    for (auto str : keys)
-    {
-        strncpy(dictKeys[i], str.c_str(), maxKeyLength);
-        i++;
-    }
-
-    MPI_Gatherv(dictKeys, totalLength, MPI_CHAR, finalDictKeys, recvcounts, displs, MPI_CHAR, 0, MPI_COMM_WORLD);
-
-    // Create new counter and merge all previous counter
-
-	vector<string> keysTotal;
-	vector<int> valuesTotal;
-
-	if (!rank){
-		for (int i = 0; i<totlen;i++){
-			keysTotal.push_back((string)finalDictKeys[i]);
-			valuesTotal.push_back(totalInt[i]);
-			// cout << finalDictKeys[i]  << " : " << totalInt[i] << endl;
+	/* Create a new word counter and merge all counter data from each proc */
+	
+	if (rank == ROOT) {
+		gatheredCharBuf[charBufSize-1] = '\0'; // just in case
+		// cout << endl << gatheredCharBuf << endl;
+		
+		// checking the pairing of data points (word-count) between the int and char buffers
+		int newlineCount = 0;
+		for (int i = 0; i < charBufSize; i++) {
+			if (gatheredCharBuf[i] == '\n')
+				newlineCount++;
 		}
+		if (newlineCount != intBufSize) {
+			cout << "Error! Data not aligned. Aborting program." << endl;
+			exit(1);
+		}
+		// Create equivalent objects from respective buffers via copy constructors
+		std::vector<int> gatheredCounts(gatheredIntBuf, gatheredIntBuf + intBufSize);
+		std::string gatheredWords(gatheredCharBuf);
+		
+		// Free memory of large buffers
+		delete[] gatheredIntBuf;
+		delete[] gatheredCharBuf;
+		
+		// cout << gatheredWords << endl;
+		// cout << gatheredCounts.size() << endl;
+		
+		// Recompose a counter from gathered data
+		Counter mergedCounter;
+		compose_counter(mergedCounter, gatheredWords, gatheredCounts);
+		
+		// cout << "Contents of the merged word counter:-" << endl;
+		print_counter(mergedCounter);
+		cout << get_counter_size(mergedCounter) << endl;
 	}
-
-
-	Counter total_counter;
-
-	if (!rank){
-		compose_counter(total_counter,keysTotal,valuesTotal);
-		cout << "Contents of the total_counter:-" << endl;
-		print_counter(total_counter);
-	}
-
-    delete[] dictKeys;
-    if (rank == 0)
-    {
-        delete[] finalDictKeys;
-        delete[] recvcounts;
-        delete[] displs;
-    }
 
 	// Finalize the MPI environment.
     MPI_Finalize();

@@ -8,9 +8,6 @@ Run with:
 	$ ./CounterTest
 */
 
-#include <iostream>
-#include <string>
-#include <vector>
 #include "Counter.h"
 
 int main() {
@@ -78,6 +75,13 @@ int main() {
 	print_counter(new_fruit_basket);
 	
 	
+	// Printing Counter contents in some sorted order ...
+	
+	std::cout << "Sorted new_fruit_basket by alphabetical order of words:-" << std::endl;
+	print_counter(new_fruit_basket, alphabetical);
+	
+	std::cout << "Sorted new_fruit_basket by most common counts:-" << std::endl;
+	print_counter(new_fruit_basket, most_common);
 	return 0;
 }
 

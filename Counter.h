@@ -1,9 +1,9 @@
-#include <string>
-#include <unordered_map>
-#include <sstream>
-#include <vector>
-
-using namespace std;
+#include <iostream> 		// std::cout
+#include <string> 			// std::string
+#include <unordered_map> 	//std::unordered_map, std::pair
+#include <sstream> 			// std::stringstream
+#include <vector> 			// std::vector
+#include <algorithm> 		// std::sort
 
 /* Counter type is essentially and unordered_map type with word (string) for key-value and 
 count (int) for mapped-value.
@@ -18,14 +18,41 @@ void print_counter(Counter counter) {
 	std::cout << std::endl;
 }
 
-void print_sorted_counter(Counter counter, char sort_key) {
-	/* Print the contents of the Counter, following some sorting key.
-	If sort_key is 'a', print words in alphabetical order.
+bool alphabetical( std::pair<std::string, int> x, std::pair<std::string, int> y) {
+	/* Comparison function to be used in sorting Counter items (word-count pair) by comparing two 
+	items at a time. Enables sorting by alphabetical order of the words. To use, feed it as an 
+	argument to `print_counter()`.
 	*/
 	
-	if (sort_key == 'a') {
-		
-	}
+	return x.first < y.first;
+}
+
+bool most_common( std::pair<std::string, int> x, std::pair<std::string, int> y) {
+	/* Comparison function to be used in sorting Counter items (word-count pair) by comparing two 
+	items at a time. Enables sorting by most common count of words. To use, feed it as an argument 
+	to `print_counter()`.
+	*/
+	
+	return x.second > y.second;
+}
+
+void print_counter(Counter counter, 
+	bool (*comp)(std::pair<std::string, int>, std::pair<std::string, int>)) {
+	/* Print the contents of the Counter in sorted fashion, given a comparison function as a 
+	sorting key. Arguement options:
+		alphabetical
+		most_common
+	*/
+	
+	// create a vector containing all the counter items, then sort it using the given comparison 
+	// function
+	std::vector< std::pair<std::string, int> > counter_elements(counter.begin(), counter.end());
+	std::sort(counter_elements.begin(), counter_elements.end(), comp);
+	
+	// print the sorted vector of Counter items
+	for (auto& item: counter_elements)
+		std::cout << "'" << item.first << "': " << item.second << std::endl;
+	std::cout << std::endl;
 }
 
 void update_counter(Counter& counter, std::string word, int count) {
@@ -110,30 +137,4 @@ void compose_counter(Counter& counter, std::string words, std::vector<int> count
 	int i = 0; // index for counts vector
 	while (ss >> word)
 		update_counter(counter, word, counts[i++]);
-}
-
-vector<string> getKeys(Counter& counter){
-	vector<string> keys;
-	for (auto& item: counter){
-		keys.push_back(item.first);
-	}
-	return keys;
-}
-
-vector<int> getValues(Counter& counter){
-	vector<int> values;
-	for (auto& item: counter){
-		values.push_back(item.second);
-	}
-	return values;
-}
-
-void compose_counter(Counter& counter, vector<string> keys, vector<int> values) {
-	for (int i=0 ; i<keys.size(); i++){
-		if (counter.find(keys[i]) == counter.end()){ //not found
-			counter[keys[i]] = values[i];
-		} else {
-			counter.at(keys[i]) += values[i];
-		}
-	}
 }

@@ -12,7 +12,6 @@ Run with:
 #include <fstream>
 #include <string>
 #include <sstream>
-#include <limits>
 #include <mpi.h>
 #include "Counter.h"
 
@@ -39,8 +38,6 @@ int get_line_count(string filename) {
 			line.erase(line.end() - 1); // remove last 'CR' or \r character if exists
 		lineCount++;
 	}
-	
-	// cout << "'" << filename << "' line count: " << lineCount << endl << endl;
 	
 	inFile.close();
 	return lineCount;
@@ -115,7 +112,7 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	
 	// Process variables
-	string filename = "ascii-only/browning.txt";
+	string filename = "fruits.txt";
 	int totalLines; // total number of lines in the file
 	int eachLines; // number of lines for each process to work on
 	int remLines; // number of remaining lies for root proccess to work on
@@ -146,8 +143,8 @@ int main(int argc, char* argv[]) {
 	MPI_Barrier(MPI_COMM_WORLD);
 	
 	// Decomposing the counter of each proc into words and counts objects
-	std::string eachWords;
-	std::vector<int> eachCounts; 
+	string eachWords;
+	vector<int> eachCounts; 
 	decompose_counter(eachWordCounter, eachWords, eachCounts);
 
 	// Variables/arguments for count data gathering
@@ -180,7 +177,7 @@ int main(int argc, char* argv[]) {
     MPI_Gather(&sendCharAmount, 1, MPI_INT, recvCharAmounts, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 	
 	// ROOT proc computes and sets the index offsets and total sizes of the two large buffer arrays,
-	// also allocates memory for the buffer arrays.
+	// also allocates memory for the two large buffer arrays.
     if (rank == ROOT) {
 		intBufSize = charBufSize = 0; // count fromm 0 to help fill offset values
         for (int r = 0; r < nprocs; r++) { 
@@ -228,23 +225,22 @@ int main(int argc, char* argv[]) {
 			exit(1);
 		}
 		// Create equivalent objects from respective buffers via copy constructors
-		std::vector<int> gatheredCounts(gatheredIntBuf, gatheredIntBuf + intBufSize);
-		std::string gatheredWords(gatheredCharBuf);
+		vector<int> gatheredCounts(gatheredIntBuf, gatheredIntBuf + intBufSize);
+		string gatheredWords(gatheredCharBuf);
 		
 		// Free memory of large buffers
 		delete[] gatheredIntBuf;
 		delete[] gatheredCharBuf;
 		
-		// cout << gatheredWords << endl;
-		// cout << gatheredCounts.size() << endl;
-		
 		// Recompose a counter from gathered data
 		Counter mergedCounter;
 		compose_counter(mergedCounter, gatheredWords, gatheredCounts);
 		
-		// cout << "Contents of the merged word counter:-" << endl;
-		print_counter(mergedCounter);
-		cout << get_counter_size(mergedCounter) << endl;
+		// Output the final report
+		cout << "Word Count report:-" << endl;
+		print_counter(mergedCounter, most_common);
+		cout << "Unique words: " << get_counter_size(mergedCounter) << endl;
+		cout << " Total words: "<< get_counter_total(mergedCounter) << endl;
 	}
 
 	// Finalize the MPI environment.

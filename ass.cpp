@@ -19,6 +19,7 @@ or run and redirect output to a text file:
 #include <sstream>
 #include <mpi.h>
 #include <time.h>
+#include <limits.h>
 #include "Counter.h"
 
 #define ROOT 0
@@ -210,7 +211,8 @@ int main(int argc, char* argv[]) {
 	prompt_user(rank, allFilenames, minWordLen, maxWordLen);
 
 	//Initialize start time
-	clock_t start=clock();
+	//clock_t start=clock();
+	double start = MPI_Wtime();
 
     if (rank == ROOT)
         cout << "Processing..." << endl;
@@ -339,7 +341,7 @@ int main(int argc, char* argv[]) {
 	} // end of for-loop
 
 	//Initialize end time
-	clock_t end=clock();
+	double end = MPI_Wtime();
 
 	if (rank == ROOT) {
 		// Output the final report

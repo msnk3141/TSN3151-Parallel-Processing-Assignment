@@ -66,8 +66,7 @@ void process_lines(string filename, int eachLines, int startPos, Counter& counte
 	stringstream lineStream; // temporary stream buffer for each line
 	int endPos = startPos + eachLines; // ending line position
 	int processedLineCount = 0;
-    // regex wordRegex("[a-zA-Z]+");  // use regex to remove puntuations
-    regex wordRegex("([^\\W_]+(?:['_-][^\\W_]+)*)");
+    regex wordRegex("((?!\\d)[^\\W_]+(?:['_-][^\\W_]+)*)");
 
 	inFile.open(filename);
 	if (!inFile.is_open()) {
@@ -339,7 +338,7 @@ int main(int argc, char* argv[]) {
 		cout << "|             Word Count Report             |" << endl;
         print_counter(allWordCounter, most_common);
 		cout << "Unique words: " << get_counter_size(allWordCounter) << endl;
-		cout << "Total words: "<< get_counter_total(allWordCounter) << endl;
+		cout << "Total words : "<< get_counter_total(allWordCounter) << endl;
 	}
 
 	// Finalize the MPI environment.

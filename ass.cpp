@@ -6,6 +6,10 @@ Compile with:
 
 Run with:
 	$ mpirun ./ass
+or with specified number of processors (e.g. 4):
+	$ mpirun -n 4 ./ass
+or run and redirect output to a text file:
+	$ mpirun ./ass > results.txt
 */
 
 #include <iostream>
@@ -133,7 +137,6 @@ void prompt_user(int rank, char* filename, int& minWordLen, int& maxWordLen) {
 	/* Get input from user. Store input values in arguments.*/
 
 	if (rank == ROOT) {
-		/* MOVE THE 3 PROMPTS (filename, minWordLen, maxWordLen) HERE! */
         // get the file name, if the file does not exist, prompt the user to enter it again
         while (strlen(filename) == 0) {
             cout << "Enter the file name: ";
@@ -163,7 +166,6 @@ void prompt_user(int rank, char* filename, int& minWordLen, int& maxWordLen) {
         }
 	}
 
-	/* MOVE THE 3 BROADCASTS (filename, minWordLen, maxWordLen) HERE! */
     // Broadcast file name
     MPI_Bcast(filename, FILENAME_SIZE, MPI_CHAR, ROOT, MPI_COMM_WORLD);
     // Broadcast min word length
@@ -183,16 +185,18 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-	// Process variables
+	// User input variables
     int minWordLen = 0; // minimum word length for inclusion
     int maxWordLen = 0; // maximum word length for inclusion
     char filename[FILENAME_SIZE] = "";
+	
+	// Process variables
 	int totalLines; // total number of lines in the file
 	int eachLines; // number of lines for each process to work on
 	int remLines; // number of remaining lines for root proccess to work on
 	Counter eachWordCounter; // word counter of this process
 
-    /* QUERY USER FOR INPUT HERE! */
+    // Prompt user for input
 	prompt_user(rank, filename, minWordLen, maxWordLen);
 
 	// ROOT proc determines the total number of lines and each process's line count
@@ -208,7 +212,6 @@ int main(int argc, char* argv[]) {
 		// handle work for remaining lines
 		process_lines(filename, remLines, (eachLines*nprocs), eachWordCounter, minWordLen, maxWordLen);
 	}
-
 
 	// Broadcast each process's line count
 	MPI_Bcast(&eachLines, 1, MPI_INT, ROOT, MPI_COMM_WORLD);

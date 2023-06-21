@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
 	prompt_user(rank, allFilenames, minWordLen, maxWordLen);
 
 	//Initialize start time
-	//clock_t start=clock();
+	MPI_Barrier(MPI_COMM_WORLD);
 	double start = MPI_Wtime();
 
     if (rank == ROOT)
@@ -354,6 +354,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	// Finalize the MPI environment.
+	MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
 
 	return 0;

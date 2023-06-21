@@ -144,11 +144,11 @@ void prompt_user(int rank, vector<string>& allFilenames, int& minWordLen, int& m
         }
 
         // get max word length for inclusion
-        while (maxWordLen <= 0) {
-            cout << "Enter the maximum word length to be included in the count (min 1): ";
+        while (maxWordLen < minWordLen) {
+            cout << "Enter the maximum word length to be included in the count (min " << minWordLen << "): ";
             cin >> maxWordLen;
-            if (maxWordLen <= 0) {
-                cout << "Invalid input. Please enter a number greater than or equal to 1." << endl;
+            if (maxWordLen < minWordLen) {
+                cout << "Invalid input. Please enter a number greater than or equal to "  << minWordLen << "." << endl;
             }
         }
 	}

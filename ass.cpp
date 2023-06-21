@@ -123,31 +123,28 @@ void process_lines(string filename, int eachLines, int startPos, Counter& counte
 
 void prompt_user(int rank, vector<string>& allFilenames, int& minWordLen, int& maxWordLen) {
 	/* Get input from user. Store input values in arguments.*/
-	
+
 	int numberOfFiles = 0;
 	char tempFilename[FILENAME_SIZE] = ""; // for broadcasting individual filenames
 
 	if (rank == ROOT) {
 		cout << "Enter the number of text files to process: "; fflush(stdout);
 		cin >> numberOfFiles;
-		
+        cin.ignore(numeric_limits<streamsize>::max(), '\n'); // clear the input buffer
+
 		for (int i = 0; i < numberOfFiles; i++) {
-			cout << "Enter the name of text file #" << (i + 1) << ": "; fflush(stdout);
-			cin >> tempFilename;
+            tempFilename[0] = '\0';
+            while (strlen(tempFilename) == 0) {
+                cout << "Enter the name of text file #" << (i + 1) << ": "; fflush(stdout);
+                // cin >> tempFilename;
+                cin.getline(tempFilename, FILENAME_SIZE);
+                if (!is_file_exists(tempFilename)) {
+                    cout << tempFilename << " does not exist. Please enter again." << endl;
+                    tempFilename[0] = '\0';
+                }
+            }
 			allFilenames.push_back(tempFilename);
 		}
-		
-		/*
-        // get the file name, if the file does not exist, prompt the user to enter it again
-        while (strlen(filename) == 0) {
-            cout << "Enter the file name: ";
-            cin.getline(filename, FILENAME_SIZE);
-            if (!is_file_exists(filename)) {
-                cout << filename << " does not exist. Please enter again." << endl;
-                filename[0] = '\0';
-            }
-        }
-		*/
 
         // get min word length for inclusion
         while (minWordLen <= 0) {
@@ -167,17 +164,17 @@ void prompt_user(int rank, vector<string>& allFilenames, int& minWordLen, int& m
             }
         }
 	}
-	
+
 	// Broadcast number of files
 	MPI_Bcast(&numberOfFiles, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
-	
+
 	// Broadcast all filenames
 	for (int i = 0; i < numberOfFiles; i++) {
-		if (rank == ROOT) 
+		if (rank == ROOT)
 			strncpy(tempFilename, allFilenames[i].c_str(), FILENAME_SIZE);
-		
+
 		MPI_Bcast(tempFilename, FILENAME_SIZE, MPI_CHAR, ROOT, MPI_COMM_WORLD);
-		
+
 		if (rank != ROOT)
 			allFilenames.push_back(tempFilename);
 	}
@@ -203,17 +200,20 @@ int main(int argc, char* argv[]) {
     int minWordLen = 0; // minimum word length for inclusion
     int maxWordLen = 0; // maximum word length for inclusion
 	vector<string> allFilenames; // list of all the text files
-	
+
 	// Define word counter to store the frequency of words of all the text files [ROOT use only]
-	Counter allWordCounter; 
-	
+	Counter allWordCounter;
+
 	// Prompt user for input
 	prompt_user(rank, allFilenames, minWordLen, maxWordLen);
-	
-	// loop over each text file, parallely computing the frequency of words in each file one at a  
+
+    if (rank == ROOT)
+        cout << "Processing..." << endl;
+
+	// loop over each text file, parallely computing the frequency of words in each file one at a
 	// time, and updating the contents of the `allWordCounter` at the end of each iteration
 	for (string filename : allFilenames) {
-	
+
 		int totalLines; // total number of lines in the file [ROOT use only]
 		int eachLines; // number of lines for each process to work on
 		int remLines; // number of remaining lines for root proccess to work on [ROOT use only]
@@ -332,7 +332,7 @@ int main(int argc, char* argv[]) {
 			update_counter(allWordCounter, mergedCounter);
 		}
 	} // end of for-loop
-	
+
 	if (rank == ROOT) {
 		// Output the final report
         cout << "---------------------------------------------" << endl;

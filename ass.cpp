@@ -131,39 +131,9 @@ void process_lines(string filename, int eachLines, int startPos, Counter& counte
 
 void prompt_user(int rank, char* filename, int& minWordLen, int& maxWordLen) {
 	/* Get input from user. Store input values in arguments.*/
-	
+
 	if (rank == ROOT) {
 		/* MOVE THE 3 PROMPTS (filename, minWordLen, maxWordLen) HERE! */
-	}
-	
-	/* MOVE THE 3 BROADCASTS (filename, minWordLen, maxWordLen) HERE! */
-}
-
-int main(int argc, char* argv[]) {
-	// MPI environment variables
-	int nprocs, rank; // number of processes and rank/id of each process
-
-	// Initialize the MPI environment
-	MPI_Init(&argc, &argv);
-
-	// Get the number of processes and rank of each process
-	MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-	// Process variables
-    int minWordLen = 0; // minimum word length for inclusion
-    int maxWordLen = 0; // maximum word length for inclusion
-    char filename[FILENAME_SIZE] = "";
-	int totalLines; // total number of lines in the file
-	int eachLines; // number of lines for each process to work on
-	int remLines; // number of remaining lines for root proccess to work on
-	Counter eachWordCounter; // word counter of this process
-
-	prompt_user(rank, filename, minWordLen, maxWordLen);
-
-	// ROOT proc determines the total number of lines and each process's line count
-	if (rank == ROOT) {
-		/* QUERY USER FOR INPUT HERE! */
         // get the file name, if the file does not exist, prompt the user to enter it again
         while (strlen(filename) == 0) {
             cout << "Enter the file name: ";
@@ -191,7 +161,42 @@ int main(int argc, char* argv[]) {
                 cout << "Invalid input. Please enter a number greater than or equal to 1." << endl;
             }
         }
+	}
 
+	/* MOVE THE 3 BROADCASTS (filename, minWordLen, maxWordLen) HERE! */
+    // Broadcast file name
+    MPI_Bcast(filename, FILENAME_SIZE, MPI_CHAR, ROOT, MPI_COMM_WORLD);
+    // Broadcast min word length
+	MPI_Bcast(&minWordLen, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+    // Broadcast max word length
+	MPI_Bcast(&maxWordLen, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+}
+
+int main(int argc, char* argv[]) {
+	// MPI environment variables
+	int nprocs, rank; // number of processes and rank/id of each process
+
+	// Initialize the MPI environment
+	MPI_Init(&argc, &argv);
+
+	// Get the number of processes and rank of each process
+	MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	// Process variables
+    int minWordLen = 0; // minimum word length for inclusion
+    int maxWordLen = 0; // maximum word length for inclusion
+    char filename[FILENAME_SIZE] = "";
+	int totalLines; // total number of lines in the file
+	int eachLines; // number of lines for each process to work on
+	int remLines; // number of remaining lines for root proccess to work on
+	Counter eachWordCounter; // word counter of this process
+
+    /* QUERY USER FOR INPUT HERE! */
+	prompt_user(rank, filename, minWordLen, maxWordLen);
+
+	// ROOT proc determines the total number of lines and each process's line count
+	if (rank == ROOT) {
 		totalLines = get_line_count(filename);
 		eachLines = totalLines / nprocs; // divided equally between the processes
 		remLines = totalLines % nprocs;
@@ -204,12 +209,7 @@ int main(int argc, char* argv[]) {
 		process_lines(filename, remLines, (eachLines*nprocs), eachWordCounter, minWordLen, maxWordLen);
 	}
 
-    // Broadcast file name
-    MPI_Bcast(filename, FILENAME_SIZE, MPI_CHAR, ROOT, MPI_COMM_WORLD);
-    // Broadcast min word length
-	MPI_Bcast(&minWordLen, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
-    // Broadcast max word length
-	MPI_Bcast(&maxWordLen, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+
 	// Broadcast each process's line count
 	MPI_Bcast(&eachLines, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 

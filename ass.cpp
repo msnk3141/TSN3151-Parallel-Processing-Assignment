@@ -18,6 +18,7 @@ or run and redirect output to a text file:
 #include <string>
 #include <sstream>
 #include <mpi.h>
+#include <time.h>
 #include "Counter.h"
 
 #define ROOT 0
@@ -188,6 +189,8 @@ int main(int argc, char* argv[]) {
 	// MPI environment variables
 	int nprocs, rank; // number of processes and rank/id of each process
 
+	
+
 	// Initialize the MPI environment
 	MPI_Init(&argc, &argv);
 
@@ -205,6 +208,9 @@ int main(int argc, char* argv[]) {
 
 	// Prompt user for input
 	prompt_user(rank, allFilenames, minWordLen, maxWordLen);
+
+	//Initialize start time
+	clock_t start=clock();
 
     if (rank == ROOT)
         cout << "Processing..." << endl;
@@ -332,6 +338,9 @@ int main(int argc, char* argv[]) {
 		}
 	} // end of for-loop
 
+	//Initialize end time
+	clock_t end=clock();
+
 	if (rank == ROOT) {
 		// Output the final report
         cout << "---------------------------------------------" << endl;
@@ -339,6 +348,7 @@ int main(int argc, char* argv[]) {
         print_counter(allWordCounter, most_common);
 		cout << "Unique words: " << get_counter_size(allWordCounter) << endl;
 		cout << "Total words : "<< get_counter_total(allWordCounter) << endl;
+		cout << "Total time : "<< end-start << endl;
 	}
 
 	// Finalize the MPI environment.

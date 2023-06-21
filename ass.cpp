@@ -1,5 +1,5 @@
 /*
-???
+Group name: Kismet
 
 Compile with:
 	$ mpic++ ass.cpp -o ass
@@ -17,9 +17,8 @@ or run and redirect output to a text file:
 #include <regex>
 #include <string>
 #include <sstream>
+#include <limits>
 #include <mpi.h>
-#include <time.h>
-#include <limits.h>
 #include "Counter.h"
 
 #define ROOT 0
@@ -104,18 +103,6 @@ void process_lines(string filename, int eachLines, int startPos, Counter& counte
 
             update_counter(counter, word);
         }
-
-        /*
-		// clear buffer flags and load the current line into stream buffer
-		lineStream.clear();
-		lineStream.str(line);
-        // process each 'word' in this line, adding/updating the word counter
-		while (lineStream >> word) {
-			// word text cleaning goes here!
-            update_counter(counter, word);
-		}
-        */
-
 		processedLineCount++;
 	}
 
@@ -189,8 +176,7 @@ void prompt_user(int rank, vector<string>& allFilenames, int& minWordLen, int& m
 int main(int argc, char* argv[]) {
 	// MPI environment variables
 	int nprocs, rank; // number of processes and rank/id of each process
-
-	
+	double startTime, endTime; // for timing the program
 
 	// Initialize the MPI environment
 	MPI_Init(&argc, &argv);
@@ -212,7 +198,7 @@ int main(int argc, char* argv[]) {
 
 	//Initialize start time
 	MPI_Barrier(MPI_COMM_WORLD);
-	double start = MPI_Wtime();
+	startTime = MPI_Wtime();
 
     if (rank == ROOT)
         cout << "Processing..." << endl;
@@ -341,7 +327,8 @@ int main(int argc, char* argv[]) {
 	} // end of for-loop
 
 	//Initialize end time
-	double end = MPI_Wtime();
+	MPI_Barrier(MPI_COMM_WORLD);
+	endTime = MPI_Wtime();
 
 	if (rank == ROOT) {
 		// Output the final report
@@ -350,11 +337,10 @@ int main(int argc, char* argv[]) {
         print_counter(allWordCounter, most_common);
 		cout << "Unique words: " << get_counter_size(allWordCounter) << endl;
 		cout << "Total words : "<< get_counter_total(allWordCounter) << endl;
-		cout << "Total time : "<< end-start << endl;
+		cout << "Total time : "<< (endTime - startTime) << endl;
 	}
 
 	// Finalize the MPI environment.
-	MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
 
 	return 0;
